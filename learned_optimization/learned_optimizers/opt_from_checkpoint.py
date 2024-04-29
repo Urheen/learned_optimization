@@ -24,6 +24,7 @@ from typing import Optional
 import uuid
 
 from absl import logging
+logging.getLogger().disabled = True
 import gin
 import jax
 from learned_optimization import checkpoints
