@@ -123,7 +123,7 @@ def _build(path):
 #   locals()[lopt_name] = _build(os.path.join(_pretrain_root, lopt, 'params'))
 #   gin.external_configurable(locals()[lopt_name], lopt_name)
 
-lopt_path = "./pretrained_model/aug12_continue_on_bigger_2xbs_200kstep_bigproblem_v2_5620/"
+lopt_path = "./pretrained_model/aug12_continue_on_bigger_2xbs_200kstep_bigproblem_v2_5620/params"
 lopt_name = "aug12_continue_on_bigger_2xbs_200kstep_bigproblem_v2_5620".replace('.', '_').replace('-', '_')
 locals()[lopt_name] = _build(lopt_path)
 gin.external_configurable(locals()[lopt_name], lopt_name)
