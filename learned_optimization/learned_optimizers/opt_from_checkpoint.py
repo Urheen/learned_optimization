@@ -130,10 +130,10 @@ def opt_from_checkpoint(
           bindings = [b for b in bindings if b]
           bindings = bindings + [maybe_add_scope(c) for c in extra_bindings]
 
-          logging.info("Parsing bindings")
-          for b in bindings:
-            logging.info(b)
-            print(b)
+          # logging.info("Parsing bindings")
+          # for b in bindings:
+          #   logging.info(b)
+          #   print(b)
           gin.parse_config(bindings, skip_unknown=True)
 
         configurable = gin.query_parameter(f"{scope}/run_train.lopt")
@@ -144,7 +144,7 @@ def opt_from_checkpoint(
         with summary.summary_scope("opt_from_checkpoint"):
           lopt = configurable.configurable.wrapped()
           theta = lopt.init(jax.random.PRNGKey(0))
-          logging.info(f"Restoring checkpoint {checkpoint_path}")  # pylint: disable=logging-fstring-interpolation
+          # logging.info(f"Restoring checkpoint {checkpoint_path}")  # pylint: disable=logging-fstring-interpolation
           ckpt = gradient_learner.ParameterCheckpoint(theta, "", 0)
           ckpt = checkpoints.load_state(checkpoint_path, ckpt)
           opt = lopt.opt_fn(ckpt.params)
