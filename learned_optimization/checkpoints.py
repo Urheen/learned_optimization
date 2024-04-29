@@ -258,7 +258,7 @@ def load_state(path: str, state: T) -> T:
   Returns:
     The restored pytree matching the pytree structure of state.
   """
-  logging.info("Restoring state %s", path)
+  # logging.info("Restoring state %s", path)
   with filesystem.file_open(path, "rb") as fp:
     state_new = serialization.from_bytes(state, fp.read())
   tree = jax.tree_util.tree_structure(state)
