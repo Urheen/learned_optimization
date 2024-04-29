@@ -106,7 +106,7 @@ def opt_from_checkpoint(
   if config_path is None:
     config_path = "/".join(checkpoint_path.split("/")[:-1]) + "/config.gin"
 
-  logging.info("Restoring configs from: %s", config_path)
+  # logging.info("Restoring configs from: %s", config_path)
   with gin.unlock_config():
     scope = f"opt_from_checkpoint__{str(uuid.uuid4()).replace('-', '_')}"
     with gin.config_scope(None):
@@ -144,8 +144,8 @@ def opt_from_checkpoint(
         with summary.summary_scope("opt_from_checkpoint"):
           lopt = configurable.configurable.wrapped()
           theta = lopt.init(jax.random.PRNGKey(0))
-          logging.info(f"Restoring checkpoint {checkpoint_path}")  # pylint: disable=logging-fstring-interpolation
-          print(checkpoint_path)
+          # logging.info(f"Restoring checkpoint {checkpoint_path}")  # pylint: disable=logging-fstring-interpolation
+          # print(checkpoint_path)
           ckpt = gradient_learner.ParameterCheckpoint(theta, "", 0)
           ckpt = checkpoints.load_state(checkpoint_path, ckpt)
           opt = lopt.opt_fn(ckpt.params)
