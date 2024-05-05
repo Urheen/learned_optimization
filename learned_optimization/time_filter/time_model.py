@@ -118,6 +118,7 @@ import functools
 import os
 from typing import Callable, Optional, Tuple
 
+from absl import logging
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -391,6 +392,7 @@ def load_model(model_path_suffix: str, model_type: str) -> PredictionFN:
     A callable which maps from task features to predicted runtime.
   """
   path = os.path.join(get_model_root_dir(), model_path_suffix)
+  logging.info(f"Loading timing model from {path}")  # pylint: disable=logging-fstring-interpolation
 
   if model_type == "time":
     init, apply = hk.transform_with_state(timing_model_forward)

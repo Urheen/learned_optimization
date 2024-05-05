@@ -31,6 +31,7 @@ import os
 import time
 from typing import Any, Callable, Mapping, Optional, TypeVar, Union
 
+from absl import logging
 from flax import serialization
 from flax.training import checkpoints
 import gin
@@ -101,6 +102,7 @@ def save_checkpoint(ckpt_dir: str,
   Returns:
     the path of the saved checkpoint.
   """
+  logging.info(f"saving checkpoint prefix: {prefix} step:{step}")  # pylint: disable=logging-fstring-interpolation
   path = os.path.join(ckpt_dir, f"{prefix}{step}")
   if filesystem.exists(path):
     filesystem.remove(path)
@@ -169,8 +171,10 @@ def periodically_save_checkpoint(
       if checkpoint is not None:
         last_step = int(checkpoint.split(prefix)[-1])
         step = last_step + 1
+        logging.info(f"Last Step found {last_step}, saving to {step}")  # pylint: disable=logging-fstring-interpolation
       else:
         step = 0
+        logging.info(f"No last checkpoint found. Waving to {step}")  # pylint: disable=logging-fstring-interpolation
 
       for prefix, value_or_fn in checkpoint_state_map.items():
         if callable(value_or_fn):
@@ -254,6 +258,7 @@ def load_state(path: str, state: T) -> T:
   Returns:
     The restored pytree matching the pytree structure of state.
   """
+  # logging.info("Restoring state %s", path)
   with filesystem.file_open(path, "rb") as fp:
     state_new = serialization.from_bytes(state, fp.read())
   tree = jax.tree_util.tree_structure(state)

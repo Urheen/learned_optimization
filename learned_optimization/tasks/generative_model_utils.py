@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Utilities for generative modeling."""
+from absl import logging
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -114,7 +115,7 @@ def log_prob_elbo_components(encoder, decoder, prior, x, key):
   try:
     kl = sum_all_but_batch(tfp.distributions.kl_divergence(q, prior))
   except NotImplementedError:
-    print('Analytic KL divergence not available, using sampling KL'
+    logging.warn('Analytic KL divergence not available, using sampling KL'
                  'divergence instead')
     log_p_z = sum_all_but_batch(prior.log_prob(z, name='log_p_z'))
     log_q_z = sum_all_but_batch(q.log_prob(z, name='log_q_z'))

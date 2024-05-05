@@ -20,6 +20,7 @@ import os
 from typing import Optional
 
 from absl import flags
+from absl import logging
 import gin
 import jax
 from learned_optimization import filesystem
@@ -54,6 +55,7 @@ def parse_and_set_gin_config(finalize: bool, skip_unknown: bool):
   # strings.
   if FLAGS.gin_import:
     for imp in FLAGS.gin_import:
+      logging.info("Gin is importing %s", imp)
       # glob imports
       if "*" in imp:
         # Figure out which folder the module is in, then import all modules
@@ -64,6 +66,7 @@ def parse_and_set_gin_config(finalize: bool, skip_unknown: bool):
         for p in glob.glob(os.path.join(os.path.dirname(path), "*.py")):
           p = p.split("/")[-1].replace(".py", "")
           to_import = prefix + "." + p
+          logging.info("Gin is importing %s from glob", to_import)
           __import__(to_import)
       else:
         __import__(imp)
@@ -121,10 +124,10 @@ def setup_experiment(
     filesystem.make_dirs(FLAGS.train_log_dir)
 
   if FLAGS.train_log_dir:
-    # logging.info(
-    #     "Setup experiment! Training directory located: %s", FLAGS.train_log_dir
-    # )
+    logging.info(
+        "Setup experiment! Training directory located: %s", FLAGS.train_log_dir
+    )
     return FLAGS.train_log_dir
   else:
-    # logging.info("Setup experiment! No training directory specified")
+    logging.info("Setup experiment! No training directory specified")
     return None

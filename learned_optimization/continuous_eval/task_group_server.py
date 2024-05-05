@@ -20,6 +20,7 @@ import threading
 import time
 from typing import Any, Mapping, MutableMapping, MutableSequence, Optional, Sequence, Tuple
 
+from absl import logging
 import courier
 import dill
 from learned_optimization import distributed
@@ -106,6 +107,9 @@ class TaskGroupChief(threading.Thread):
       self._server.Bind("get_work", self.get_work)
       self._server.Bind("finish_work", self.finish_work)
       self._server.Start()
+      logging.info("Created TaskGroup Server [[%s]]", server_name)
+    else:
+      logging.info("No server created for TaskGroup Server [[%s]]", server_name)
 
   def _get_state(self):
     return (self._tasks, self._worker_state, self._tasks_in_taskgroup)
@@ -146,8 +150,8 @@ class TaskGroupChief(threading.Thread):
           with filesystem.file_open(self._state_file, "rb") as f:
             self._set_state(dill.loads(f.read()))
       except EOFError as e:
-        print("Caught a EOFError error. Not restoring.")
-        print(str(e))
+        logging.error("Caught a EOFError error. Not restoring.")
+        logging.error(str(e))
 
   @profile.wrap()
   def _save_state(self):
@@ -158,6 +162,8 @@ class TaskGroupChief(threading.Thread):
   def _unsafe_save_state(self):
     # write then move for atomic actions.
     with filesystem.file_open(self._state_file + "_tmp", "wb") as f:
+      if self.verbose:
+        logging.info(f"Saving state: {self._get_state()}")  # pylint: disable=logging-fstring-interpolation
       with profile.Profile("dill_dumps"):
         content = dill.dumps(self._get_state())
       f.write(content)
@@ -171,17 +177,25 @@ class TaskGroupChief(threading.Thread):
         # If the worker is not currently working on anything, first see if there
         # are any free tasks. If none, return None.
         if not self._tasks:
+          logging.info("No tasks found in queue.")
           return None
 
         # Otherwise pop off the first element of the task queue and assign it to
         # the worker.
         task = self._tasks.pop(0)
+        logging.info("Assigning worker%d to task_group%s id%d task %s",
+                     worker_id, task.task_group, task.task_index,
+                     task.task_content)
+
         self._worker_state[worker_id] = task
       else:
         # Otherwise, we just resume the same task the worker was working on
         # before. This could be triggered if the worker got interrupted or is
         # restarted in some way.
         task = self._worker_state[worker_id]
+        logging.info("Resuming worker%d to task_group%s id%d for task %s",
+                     worker_id, task.task_group, task.task_index,
+                     task.task_content)
       self._schedule_save_state = True
       return self._worker_state[worker_id]
 
@@ -189,6 +203,8 @@ class TaskGroupChief(threading.Thread):
   def finish_work(self, worker_id: Any, result: Any):
     """Finish a task and record the result with the task queue."""
     with self._lock:
+      logging.info("Worker %d finished work with result %s", worker_id,
+                   str(result))
       task = self._worker_state[worker_id]
       # the worker is no longer working on this task so set it to None.
       self._worker_state[worker_id] = None
@@ -200,6 +216,8 @@ class TaskGroupChief(threading.Thread):
               task_result, result=result)
 
       self._schedule_save_state = True
+      logging.info("Worker %d is done with finish_work %s", worker_id,
+                   str(result))
 
   @profile.wrap()
   def get_utilization(self) -> Tuple[int, int, Mapping[Any, int]]:
@@ -238,9 +256,14 @@ class TaskGroupChief(threading.Thread):
 
         n_done = sum([(i.result is not None) for i in values])
 
+        # TODO(lmetz) Put this on a timer so this prints less.
+        if self.verbose:
+          logging.info("Values on taskgroup(%s): %d/%d", str(task_group),
+                       n_done, len(values))
 
         # If all tasks have values
         if all([(i.result is not None) for i in values]):
+          logging.info("Finished task group %s.", str(task_group))
           task_results = self._tasks_in_taskgroup.pop(task_group)
           values = [r.result for r in task_results]
           tasks = [r.eval_task for r in task_results]

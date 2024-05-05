@@ -22,6 +22,7 @@ from typing import Callable
 import uuid
 
 from absl import app
+from absl import logging
 import gin
 import jax
 import jax.numpy as jnp
@@ -49,11 +50,13 @@ def eval_and_save_one_timing(
     speeds_and_std = timings.task_family_runtime_stats(
         task_family, num_tasks_list=[8])
   except Exception as e:  # pylint: disable=broad-except
+    logging.error("Failed on sample with config:\n" f"{cfg} with exception {e}")  # pylint: disable=logging-fstring-interpolation
     speeds_and_std = None
 
   output = pickle.dumps((cfg, speeds_and_std))
 
   path = os.path.join(save_dir, f"{seed}_{str(uuid.uuid4())}.pkl")
+  logging.info("Writing results to %s", path)
   with filesystem.file_open(path, "wb") as f:
     f.write(output)
 
@@ -79,6 +82,7 @@ def run_many_eval_and_save(
       num_files = len(glob.glob(save_dir + "/*"))
       if num_files > num_to_run:
         return
+      logging.info(f"Found {num_files} -- continuing to run.")  # pylint: disable=logging-fstring-interpolation
 
     # TODO(lmetz) this thing will run out of memory due to various caching that
     # learned_optimization does. Figure out a way to clear timings more.

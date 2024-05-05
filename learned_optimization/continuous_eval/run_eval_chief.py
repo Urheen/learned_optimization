@@ -23,6 +23,7 @@ import time
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, Union
 
 from absl import app
+from absl import logging
 import flax
 from flax.metrics import tensorboard
 from flax.training import checkpoints
@@ -61,7 +62,7 @@ def _retry_copy(src, target):
       filesystem.copy(src, target)
       return
     except Exception as e:  # pylint: disable=broad-except
-      print(str(e))
+      logging.error(str(e))
 
   filesystem.copy(src, target)
 
@@ -117,6 +118,8 @@ def monitor_checkpoint_dir(
     with profile.Profile("waiting"):
       if only_return_latest:
         next_ckpt_idx = _last_checkpoint_idx(monitor_dir, prefix_to_monitor)
+        logging.info(  # pylint: disable=logging-fstring-interpolation
+            f"Last checkpoint found: {next_ckpt_idx}. But on current {step}")  # pylint: disable=logging-fstring-interpolation
         if next_ckpt_idx is None or next_ckpt_idx <= step:
           time.sleep(sleep_time)
           continue
@@ -358,6 +361,7 @@ def write_results_to_summary_writer(summary_writer: Any, chief_name: str,
 
   with profile.Profile("flush"):
     summary_writer.flush()
+    logging.info("Finished writing things out!!")
 
 
 def write_result_to_population(result: Tuple[Any, Sequence[Any], Sequence[Any]],
@@ -421,7 +425,16 @@ def write_results_thread_main(
           continue
 
       task_group, values, tasks = maybe_finished
+      logging.info("Got a result and saving!")
+      logging.info(str(values))
+      logging.info("for task group")
+      logging.info(str(task_group))
+      logging.info("and tasks")
+      logging.info(str(tasks))
+
       metrics = {}
+      for fn in values_to_metrics_fns:
+        logging.info(f"Found metrics_fn: {fn}")  # pylint: disable=logging-fstring-interpolation
 
       if isinstance(values_to_metrics_fns[0], str):
         # value passed in through gin. Do a lookup to convert these to fn.
@@ -435,6 +448,7 @@ def write_results_thread_main(
           if k in metrics:
             raise ValueError(f"Duplicate metric key found! [[{k}]]")
           metrics[k] = v
+      logging.info("Successfully converted metrics %s", str(metrics))
 
       steps = [r["step"] for r in values]
       step = int(steps[0])
@@ -533,6 +547,9 @@ def run_evaluation_chief(train_log_dir: str,
                                                  chief_name):
     num_tasks, worker_active, _ = chief.get_utilization()
 
+    logging.info("Found paths: %s", str(prefix_mapping))
+    logging.info("Evaluation cluster status: num_tasks: %s, worker_active: %s",
+                 str(num_tasks), str(worker_active))
     skip = False
 
     if skip_checkpoints_if_busy:
@@ -546,8 +563,12 @@ def run_evaluation_chief(train_log_dir: str,
 
     if not skip:
       with profile.Profile("add_task_group"):
+        logging.info(  # pylint: disable=logging-fstring-interpolation
+            f"Adding a {len(evaluation_set)} evaluations for checkpoint paths {prefix_mapping}"
+        )
         chief.add_task_group((task_index, prefix_mapping), evaluation_set)
     else:
+      logging.info("Skipping checkpoint %s", str(prefix_mapping))
       for path in prefix_mapping.values():
         filesystem.remove(path)
 
@@ -555,14 +576,14 @@ def run_evaluation_chief(train_log_dir: str,
 def main(_):
   train_log_dir = setup_experiment.setup_experiment(gin_finalize=False)
 
-
+  logging.info("Waiting on %s", train_log_dir)
 
   i = 0
   while not filesystem.exists(train_log_dir):
     time.sleep(1)
     i += 1
     if i % 20 == 0:
-      print("Waiting on %s after %d secs", train_log_dir, i)
+      logging.info("Waiting on %s after %d secs", train_log_dir, i)
 
   run_evaluation_chief(train_log_dir)
 

@@ -25,6 +25,7 @@ import time
 from typing import Any, Mapping, Optional, Callable
 
 from absl import app
+from absl import logging
 import gin
 import jax
 from learned_optimization import setup_experiment
@@ -79,6 +80,8 @@ def maybe_get_hparam_set(
   trimmed_results = []
   for (path, rep), res in zip(paths_reps, results):
     if len(res) < rep:
+      logging.info(f"Failed to find enough results in dir {path}. "  # pylint: disable=logging-fstring-interpolation
+                   f"Expected {len(res)}")
       return None
     trimmed_results.append(jax.tree_util.tree_map(stack, *res[0:rep]))
   stacked = jax.tree_util.tree_map(stack, *trimmed_results)
@@ -111,8 +114,11 @@ def wait_until_ready_then_archive_task(task_name: str = gin.REQUIRED,
   while True:
     r = maybe_archive_hparam_set(task_name, hparam_set_name)
     if r:
+      logging.info(f"Saved success! Wrote {hparam_set_name} {task_name}.")  # pylint: disable=logging-fstring-interpolation
       return
     else:
+      logging.info(f"Saved Failed! {hparam_set_name} {task_name}.")  # pylint: disable=logging-fstring-interpolation
+      logging.info("Waiting 10 seconds and trying again.")
       time.sleep(10)
 
 

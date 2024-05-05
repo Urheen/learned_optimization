@@ -17,6 +17,7 @@
 import time
 from typing import Any, MutableMapping, Optional, Sequence, Tuple
 
+from absl import logging
 import gin
 from learned_optimization.population import population
 import numpy as onp
@@ -89,6 +90,9 @@ class WinnerTakeAllGenetic(population.Mutate):
         agg = lambda x: x[-1]
 
       values.append(agg(valid_values))
+
+    # all workers have values, so now exploit!
+    logging.info("Got values across population %s", str(values))
 
     # We assume that the values here are all floating loss values.
     # grab the highest performing checkpoint data

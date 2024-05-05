@@ -30,6 +30,7 @@ import threading
 import time
 from typing import Any, Callable, Generic, Optional, Sequence, Tuple, TypeVar
 
+from absl import logging
 from learned_optimization import profile
 import numpy as onp
 
@@ -53,6 +54,7 @@ def uniquify_server_name(server_name: str, experiment_name: str) -> str:
   hmod = hashlib.sha256()
   hmod.update(experiment_name.encode("utf-8"))
   hval = hmod.hexdigest()[0:20]
+  logging.info(f"Hashing experiment name [{experiment_name}] => {str(hval)}")  #. pylint: disable=logging-fstring-interpolation
   return str(hval) + "__" + server_name
 
 
@@ -121,6 +123,7 @@ class AsyncLearner(Generic[T, W]):
           port=self._port)
       self._server.Bind("put_grads", self.put_grads)
       self._server.Bind("get_weights", self.get_weights)
+      logging.info("Started Async Server!")
       self._server.Start()
 
   def _is_step_valid(self, step: int) -> bool:
@@ -133,6 +136,8 @@ class AsyncLearner(Generic[T, W]):
     while True:
       if self._is_step_valid(step):
         self._lock.acquire(blocking=True)
+        logging.info(  # pylint: disable=logging-fstring-interpolation
+            f"size of outer_gradients {len(self._outer_gradients)}....")
         if len(self._outer_gradients) < self._buffer_size:
           self._outer_gradients.append((int(step), value))
           self._lock.release()
@@ -140,8 +145,10 @@ class AsyncLearner(Generic[T, W]):
         else:
           self._lock.release()
           if self._block_when_buffer_full:
+            logging.info(f"Hanging worker {worker_id}....")  # pylint: disable=logging-fstring-interpolation
             time.sleep(1)
           else:
+            logging.info(f"Throwing away data for {worker_id}....")  # pylint: disable=logging-fstring-interpolation
             return
           with self._cv:
             self._cv.notify_all()
@@ -334,6 +341,7 @@ class SyncLearner(Generic[T, W]):
           thread_pool_size=40)
       self._server.Bind("put_grads", self.put_grads)
       self._server.Bind("get_weights", self.get_weights)
+      logging.info("Started Sync Server!")
       self._server.Start()
 
   def put_grads(self, worker_id: Any, step: int, value: T):

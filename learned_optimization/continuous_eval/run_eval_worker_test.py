@@ -18,6 +18,7 @@
 import os
 import tempfile
 
+from absl import logging
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
@@ -56,17 +57,22 @@ class RunEvalWorkerTest(parameterized.TestCase):
     task = task_group_server.EvalTask(task_group, task_id,
                                       (gin_params, eval_name))
 
+    logging.info("load_gin_and_run number pre")
     result = run_eval_worker.load_gin_and_run(trainlogdir.name, task, lopt)
 
+    logging.info("load_gin_and_run number pre")
     result = run_eval_worker.load_gin_and_run(trainlogdir.name, task, lopt)
+    logging.info("Initial time %f", result["total_time"])
 
     self.assertEqual(result["gen_id"], "genid")
     self.assertEqual(result["step"], 123)
 
     for i in range(10):
+      logging.info("load_gin_and_run number %d", i)
       result = run_eval_worker.load_gin_and_run(trainlogdir.name, task, lopt)
       # This should be fast, no compiles needed.
       # TODO(lmetz) make this test based on number of compiles rather than time
+      logging.info("Run %d/10 time: %f", i, result["total_time"])
       assert result["total_time"] < 0.1
 
     trainlogdir.cleanup()

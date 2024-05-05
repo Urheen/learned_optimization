@@ -20,6 +20,7 @@ import pickle
 import uuid
 
 from absl import app
+from absl import logging
 import gin
 import jax
 from learned_optimization import filesystem
@@ -48,6 +49,7 @@ def run_many_eval_and_save(task: tasks_base.Task = gin.REQUIRED,
   output = pickle.dumps(speeds_and_std)
 
   path = os.path.join(save_dir, f"{str(uuid.uuid4())}.pkl")
+  logging.info("Writing results to %s", path)
   with filesystem.file_open(path, "wb") as f:
     f.write(output)
 

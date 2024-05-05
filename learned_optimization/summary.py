@@ -24,6 +24,7 @@ import threading
 import typing
 from typing import Any, Callable, Mapping, MutableMapping, Sequence, Tuple, TypeVar, Union
 
+from absl import logging
 import jax
 import jax.numpy as jnp
 from learned_optimization import profile
@@ -37,7 +38,7 @@ try:
   _ = oryx.core.sow  # Ensure that loading of sow works.
   ORYX_LOGGING = True
 except (ImportError, AttributeError):
-  print("Oryx not found! This library will still work but no summary"
+  logging.error("Oryx not found! This library will still work but no summary"
                 "will be logged.")
   ORYX_LOGGING = False
 

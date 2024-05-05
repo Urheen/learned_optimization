@@ -20,6 +20,7 @@ import time
 from typing import TypeVar
 
 from absl import flags
+from absl import logging
 
 flags.DEFINE_bool("profile_log_times", False, "Log out timing information.")
 
@@ -45,9 +46,8 @@ class Profile:
     self._start_time = time.time()
 
   def __exit__(self, exc_type, exc_value, traceback):
-    pass
-    # if FLAGS.profile_log_times:
-    #   logging.info(f"{self.name} took {time.time()-self._start_time} seconds")  # pylint: disable=logging-fstring-interpolation
+    if FLAGS.profile_log_times:
+      logging.info(f"{self.name} took {time.time()-self._start_time} seconds")  # pylint: disable=logging-fstring-interpolation
 
 
 def wrap():
