@@ -19,7 +19,6 @@ import os
 import pickle
 from typing import Any, Callable, Iterator, Mapping, Sequence, Tuple
 
-from absl import logging
 from learned_optimization import filesystem
 from learned_optimization.tasks.parametric import cfgobject
 import numpy as onp
@@ -54,7 +53,6 @@ def _threaded_tqdm_map(threads: int, func: Callable[[Any], Any],
 
 def number_of_generated_files(sample_fn_name: str, hardware_name: str) -> int:
   base_dir = _get_timing_dir(sample_fn_name, hardware_name)
-  logging.info(f"Looking for files in {base_dir + '/*'}")  # pylint: disable=logging-fstring-interpolation
   files = filesystem.glob(base_dir + "/*")
   return len(files)
 
@@ -80,9 +78,7 @@ def load_runtime_files(
   """
   base_dir = _get_timing_dir(sample_fn_name, hardware_name)
 
-  logging.info(f"Looking for files in {base_dir + '/*'}")  # pylint: disable=logging-fstring-interpolation
   files = filesystem.glob(base_dir + "/*")
-  logging.info(f"found {len(files)} files.")  # pylint: disable=logging-fstring-interpolation
 
   # sort by the seed
   files = sorted(files, key=lambda x: int(x.split("/")[-1].split("_")[0]))
