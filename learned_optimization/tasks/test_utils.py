@@ -15,7 +15,6 @@
 
 """Utilities for testing tasks and task families."""
 
-from absl import logging
 import jax
 import jax.numpy as jnp
 from learned_optimization.tasks import base
@@ -33,7 +32,6 @@ def smoketest_task(task: base.Task, abstract_data: bool = True):
   key = jax.random.PRNGKey(0)
   param, state = task.init_with_state(key)
 
-  logging.info("Getting data for %s task", str(task))
   if task.datasets:
     if abstract_data and task.datasets.abstract_batch is not None:
       batch = jax.tree_util.tree_map(lambda x: jnp.zeros(x.shape, x.dtype),
@@ -42,22 +40,16 @@ def smoketest_task(task: base.Task, abstract_data: bool = True):
       batch = next(task.datasets.train)
   else:
     batch = ()
-  logging.info("Got data")
 
-  logging.info("starting forward")
   loss_and_state = task.loss_with_state(param, state, key, batch)
   del loss_and_state
-  logging.info("starting backward")
   grad, aux = jax.grad(
       task.loss_with_state, has_aux=True)(param, state, key, batch)
   del grad, aux
-  logging.info("checking normalizer")
   task.normalizer(jnp.asarray(1.0))
 
-  logging.info("checking loss_with_state_and_aux")
   loss, state, aux = task.loss_with_state_and_aux(param, state, key, batch)
   del loss, state, aux
-  logging.info("done")
 
 
 def smoketest_task_family(task_family: base.TaskFamily):
