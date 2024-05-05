@@ -23,7 +23,6 @@ import functools
 import os
 from typing import Any, Optional, Sequence, Tuple
 
-from absl import logging
 import chex
 import flax
 import gin
@@ -268,14 +267,6 @@ class HyperV2(lopt_base.LearnedOptimizer):
     self.constant_loss = constant_loss
     self.summarize_all_control = summarize_all_control
     self.clip_param_scale_amount = clip_param_scale_amount
-
-    if self.use_bugged_loss_features:
-      logging.warning("You are using bugged loss features! If you are using a"
-                      "pretrained optimizer, otherwise this is an error.")
-
-    logging.info(
-        f"Validation mode: {self.validation_mode} (with valid feature dim: {with_validation_feature_dim})"
-    )
 
     self.rnn_to_controls = hk.without_apply_rng(
         hk.transform(lambda x: hk.Linear(  # pylint: disable=unnecessary-lambda, g-long-lambda
