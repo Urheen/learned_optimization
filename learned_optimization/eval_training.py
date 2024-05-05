@@ -18,7 +18,6 @@ import dataclasses
 import functools
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple
 
-from absl import logging
 import gin
 import jax
 from jax import lax
@@ -221,8 +220,8 @@ def single_task_training_curves(
             elif agg == "tensor":
               summary_writer.tensor(k, v, step=i)
             else:
-              logging.warning(f"Not supported aggregation type {agg}."  # pylint: disable=logging-fstring-interpolation
-                              f"Dropping data for key {k}.")
+                pass
+
         metrics.append(m)
         metrics_xs.append(i)
 
@@ -290,9 +289,6 @@ def _cached_vectorize_train_fns(
     A dataclass containing functions which initialize, unroll, and evalute the
       inner problem being trained.
   """
-  logging.info(  # pylint: disable=logging-fstring-interpolation
-      f"Recreating get_function with: {task_family} ({id(task_family)}), {learned_opt} ({id(learned_opt)}), {n_tasks}"
-  )
 
   @functools.partial(jax.pmap, in_axes=(None, 0, None))
   def vec_single_task(theta, key, num_steps):
@@ -444,11 +440,6 @@ def multi_task_training_curves(
 
   n_tasks_per_device = n_tasks // n_devices
   keys = jax.vmap(lambda k: jax.random.split(k, n_tasks_per_device))(keys)
-
-  logging.info(f"Running _cached_vectorize_train_fns with: "  # pylint: disable=logging-fstring-interpolation
-               f"{task_family} ({id(task_family)}), "
-               f"{learned_opt} ({id(learned_opt)})."
-               f"Found n_devices {n_devices} and n_tasks {n_tasks}.")
 
   train_fns = _cached_vectorize_train_fns(
       task_family,
