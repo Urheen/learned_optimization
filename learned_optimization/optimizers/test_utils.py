@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Utilities for testing optimizers."""
-from absl import logging
 import jax
 from jax import core
 import jax.numpy as jnp
@@ -80,10 +79,6 @@ def smoketest_optimizer(optimizer: base.Optimizer, strict_types: bool = True):
         opt_state, grad, loss=l, model_state=s, key=key)
 
     assert struct1 == struct2, "does not have the same input output structure"
-
-    logging.info("Got resulting shapes:")
-    logging.info(jax.tree_util.tree_map(lambda x: (x.shape, x.dtype), shape1))
-    logging.info(jax.tree_util.tree_map(lambda x: (x.shape, x.dtype), shape2))
 
     eqls = jax.tree_util.tree_map(lambda x, x2: x.shape == x2.shape, shape1,
                                   shape2)
