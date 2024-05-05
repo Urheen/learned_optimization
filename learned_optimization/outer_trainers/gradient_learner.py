@@ -19,7 +19,6 @@ import functools
 import time
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
-from absl import logging
 import chex
 import flax
 import gin
@@ -192,11 +191,6 @@ class GradientLearner:
     # TODO(lmetz) hook up model state for learned optimizers
     model_state = None
 
-    if self._init_theta_from_path:
-      logging.info(  # pylint: disable=logging-fstring-interpolation
-          f"Got a init from params path {self._init_theta_from_path}."
-          " Using this instead of random initialization.")
-
       # To load a checkpoint, the state of the target object must be specified,
       # so we pass fake values here.
       fake_param_checkpoint = ParameterCheckpoint(
@@ -208,10 +202,6 @@ class GradientLearner:
     theta_opt_state = self._theta_opt.init(
         theta_init, model_state, num_steps=self._num_steps)
 
-    if self._init_outer_state_from_path:
-      logging.info(  # pylint: disable=logging-fstring-interpolation
-          f"Got a init from outer state path {self._init_outer_state_from_path}."
-          " Using this instead of randomly initializing.")
       fake_checkpoint = OptCheckpoint(
           gradient_learner_state=GradientLearnerState(theta_opt_state),
           elapsed_time=0.0,
@@ -404,9 +394,6 @@ def gradient_worker_compute(
 
       cfg_name = estimator.cfg_name()
 
-      logging.info(
-          "compute_gradient_estimate for estimator name %s and cfg name %s",
-          estimator.task_name(), estimator.cfg_name())
       with profile.Profile(f"unroll__metrics{with_metrics}"):
         estimator_out, metrics = estimator.compute_gradient_estimate(
             worker_weights, rng, unroll_state, with_summary=with_metrics)
@@ -435,8 +422,7 @@ def gradient_worker_compute(
             "outer_iteration": worker_weights.outer_state.outer_iteration,
         })
       else:
-        logging.warn("No out specified by learner. "
-                     "Not logging any events data.")
+        pass
 
       metrics = {k: v for k, v in metrics.items()}
       if extra_metrics:
