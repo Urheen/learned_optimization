@@ -18,7 +18,6 @@ import functools
 import time
 from typing import Any, Callable, Iterator, Mapping, Optional, Tuple
 
-from absl import logging
 import jax
 import jax.numpy as jnp
 from learned_optimization import training
@@ -131,7 +130,6 @@ def time_for_task_family_vmap_unroll_func(
 
   key = jax.random.PRNGKey(0)
   keys = jax.random.split(key, num_tasks)
-  logging.info("Sampling task params")
   task_params = jax.vmap(task_family.sample)(keys)
 
   if lopt:
@@ -144,11 +142,9 @@ def time_for_task_family_vmap_unroll_func(
   def init(task_param, key):
     return task_family.task_fn(task_param).init_with_state(key)
 
-  logging.info("init_params")
   p, s = jax.jit(init)(task_params, keys)
 
   inner_traj_num_steps = 1000
-  logging.info("init opt state")
   if lopt:
     opt_state = jax.jit(
         jax.vmap(lambda pp, ss, t: lopt.opt_fn(t).  # pylint: disable=g-long-lambda
@@ -214,14 +210,12 @@ def time_for_task_family_vmap_unroll(
         opt=opt,
         lopt=lopt,
         scan_unroll=scan_unroll)
-    logging.info("run jit")
+
     mean, stderr = time_jax_fn(fn, time_measurements=num_time_estimates)
     mean = mean / (num_tasks * unroll_steps)
     stderr = stderr / (num_tasks * unroll_steps)
     return mean, stderr
   except RuntimeError as e:
-    logging.warning("Runtime error! This is likely OOOM.")
-    logging.warning(str(e))
     if "Resource exhausted:" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
       return onp.nan, onp.nan
     else:
