@@ -17,7 +17,6 @@
 import os
 from typing import Any, Sequence
 
-from absl import logging
 from flax import serialization
 import jax
 from learned_optimization import filesystem as fs
@@ -33,7 +32,6 @@ def save_state(path, state):
 
 
 def load_state(path, state):
-  logging.info("Restoring state %s", path)
   with fs.file_open(path, "rb") as fp:
     state_new = serialization.from_bytes(state, fp.read())
   tree = jax.tree_util.tree_structure(state)
