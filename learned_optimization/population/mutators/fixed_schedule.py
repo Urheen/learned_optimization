@@ -17,7 +17,6 @@
 import time
 from typing import Any, Mapping, MutableMapping, Sequence
 
-from absl import logging
 import gin
 from learned_optimization.population import population
 
@@ -39,7 +38,6 @@ class FixedSchedule(population.Mutate):
              current_workers: Sequence[population.ActiveWorker],
              cache: MutableMapping[str, MutableMapping[int,
                                                        population.Checkpoint]]):
-    logging.info("running FixedSchedule.update")
     assert len(current_workers) == 1
 
     worker = current_workers[0]
@@ -47,19 +45,14 @@ class FixedSchedule(population.Mutate):
 
     # grab the last checkpoint here.
     last_checkpoint = steps.values()[-1]  # pytype: disable=unsupported-operands
-    logging.info("Active worker: %s", str(worker))
-    logging.info("last checkpoint : %s", str(last_checkpoint))
+
 
     for k, sched_v in sorted(
         self._schedule.items(), key=lambda k_v: int(k_v[0])):
-      logging.info(f"Checking step {k} on checkpoint {last_checkpoint.step}")  # pylint: disable=logging-format-interpolation,logging-fstring-interpolation
 
       # If the last checkpoint iteration is greater than the key we know we must
       # apply this checkpoint.
       if int(k) <= int(last_checkpoint.step):
-        logging.info(  # pylint: disable=logging-format-interpolation,logging-fstring-interpolation
-            f"Applying! {k} on checkpoint {last_checkpoint.step} === {sched_v}")
-
         # starting a new generation as we have new hparams
         genid = population.make_gen_id()
         worker = population.ActiveWorker(last_checkpoint.params, sched_v, genid,
