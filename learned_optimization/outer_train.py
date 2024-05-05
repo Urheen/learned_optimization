@@ -38,7 +38,6 @@ import traceback
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
 
 from absl import flags
-from absl import logging
 import flax
 import gin
 import haiku as hk
@@ -276,7 +275,6 @@ def maybe_resample_gradient_estimators(
     if stochastic_resample_frequency > 0 and onp.random.rand(
     ) < 1.0 / stochastic_resample_frequency:
       with profile.Profile("Resample_in_maybe_resample_gradient_estimators"):
-        logging.info("Resampling Static")
         key, key1, key2 = jax.random.split(key, 3)
         ests = sample_estimators_fn(
             learned_opt=learned_opt,
@@ -368,9 +366,6 @@ def train_worker(
     # this is only triggered with population based training!
     if last_outer_cfg != dist_data.outer_cfg:
       with profile.Profile("rebuilding_from_population"):
-        logging.info("Rebuilding statics due to new outer_cfg")
-        logging.info("New cfg: %s", str(dist_data.outer_cfg))
-        logging.info("Old cfg: %s", str(last_outer_cfg))
 
         print("Rebuilding statics due to new outer_cfg")
         _parse_outer_cfg(dist_data.outer_cfg)
@@ -414,8 +409,6 @@ def train_worker(
       outer_step = onp.asarray(outer_step)
 
     with profile.Profile("put_grads"):
-      logging.info(  #  pylint: disable=logging-fstring-interpolation
-          f"put_Grads with {to_put_grads.gen_id} and step {outer_step}")
       distributed_worker.put_grads(int(outer_step), to_put_grads)
 
     grad_estimators, unroll_states = maybe_resample_gradient_estimators(
@@ -693,7 +686,6 @@ def train_learner(
   learner_time = time.time()
   worker_ids = collections.deque(maxlen=10)
 
-  logging.info("Starting learner training loop.")
   for i in tqdm.trange(num_steps):
     if population:
       new_data = population.maybe_get_worker_data(population_worker_id, gen_id,
@@ -704,8 +696,6 @@ def train_learner(
         outer_cfg = new_data.meta_params
         gen_id = new_data.generation_id
         step = new_data.step
-        logging.info("got results of maybe_get_worker_data!")
-        logging.info(f"{checkpoint_path}, {outer_cfg}, {gen_id}, {step}")  # pylint: disable=logging-fstring-interpolation
 
         if checkpoint_path is not None:
           gradient_learner_state, elapsed_time, total_inner_steps = _load_checkpoint(
@@ -725,7 +715,6 @@ def train_learner(
 
         # Now actually put the config into effect.
         if outer_cfg != last_outer_cfg:
-          logging.info("Rebuilding statics due to new outer_cfg")
           last_outer_cfg = outer_cfg
           _parse_outer_cfg(outer_cfg)
           outer_learner = outer_learner_fn()
@@ -763,7 +752,6 @@ def train_learner(
     filter_fn = lambda x: x.gen_id == gen_id if gen_id else lambda x: True
     steps, mix_t_grads, buffer_size = dist_learner.gather_grads(filter_fn)
 
-    logging.info("Applying grad for generation=%s", gen_id)
 
     with_m = True if (summary_every_n and i % summary_every_n == 0) else False
 
@@ -778,7 +766,6 @@ def train_learner(
 
     # Then we set the new set of weights.
     with profile.Profile("outer_learner.get_state_for_worker"):
-      logging.info("Setting weights for generation=%s", gen_id)
       worker_weights = outer_learner.get_state_for_worker(
           gradient_learner_state)
 
@@ -824,7 +811,6 @@ def train_learner(
         elapsed_time = elapsed_time + time.time() - train_start_time
         to_write["elapsed_time"] = elapsed_time
         train_start_time = time.time()
-        logging.info(f"Elapsed time: {elapsed_time} seconds.")  #  pylint: disable=logging-fstring-interpolation
 
       summary_future = _threaded_write_summary(summary_writer, to_write, step,
                                                summary_thread_pool,
@@ -837,8 +823,6 @@ def train_learner(
       return dist_learner
 
     if num_seconds and elapsed_time > num_seconds:
-      logging.info(f"Finished {elapsed_time} seconds.")  #  pylint: disable=logging-fstring-interpolation
-      logging.info("Exiting.")
       return dist_learner
 
   return dist_learner
@@ -1057,8 +1041,6 @@ def local_train(
       elapsed_time += time.time() - train_start_time
       to_write["elapsed_time"] = elapsed_time
       train_start_time = time.time()
-      logging.info(f"Elapsed time: {elapsed_time} seconds.")  # pylint: disable=logging-fstring-interpolation
-
     summary_future = _threaded_write_summary(summary_writer, to_write, step,
                                              summary_thread_pool,
                                              summary_future)
@@ -1066,8 +1048,6 @@ def local_train(
     if int(step) >= num_steps:
       return
     if num_seconds and elapsed_time > num_seconds:
-      logging.info(f"Finished {elapsed_time} seconds.")  # pylint: disable=logging-fstring-interpolation
-      logging.info("Exiting.")
       return
 
 
@@ -1083,9 +1063,7 @@ def _parse_outer_cfg(outer_cfg: Sequence[str]):
         new_cfg.append(f"@default_scope/{o[1:]}")
       else:
         new_cfg.append(f"default_scope/{o}")
-    logging.info("Applying new outer_cfg")
     for c in new_cfg:
-      logging.info(c)
     with gin.unlock_config():
       gin.parse_config(new_cfg)
 
@@ -1107,9 +1085,6 @@ def _move_all_gin_config_to_default_scope():
   for (unused_scope, k), v in gin.config._OPERATIVE_CONFIG.items():  # pylint: disable=protected-access
     new_config[("default_scope", k)] = v
   gin.config._OPERATIVE_CONFIG = new_config  # pylint: disable=protected-access
-
-  logging.info("Training with the following gin config")
-  logging.info(gin.config_str())
 
 
 @gin.configurable
@@ -1235,12 +1210,8 @@ def run_train(
         # NotImplementedError
         except RuntimeError as e:
           # TODO(lmetz) catch only memory errors?
-          logging.error(
-              "Failed to train worker? Likely this is a memory error.")
-          logging.error("Please check the following error manually for now.")
-          logging.error(str(type(e)))
-          logging.error(str(e))
-          logging.error(traceback.format_exc())
+          print(e)
+          exit(0)
 
           # TODO(lmetz) clear a bunch of memory on the device?
     else:
@@ -1255,14 +1226,9 @@ def run_population_controller(population_root_dir: str,
 
   filesystem.make_dirs(population_root_dir)
 
-  logging.info("Creating population controller.")
-
   population = population_mod.PopulationController(
       initial_population, mutator, log_dir=population_root_dir)
 
-  logging.info("STARTING POPULATION SERVER")
-  logging.info("Initial pop:")
-  logging.info(str(initial_population))
 
   server = population_mod.start_courier_server(
       population_mod.uniquify_server_name(population_root_dir,
