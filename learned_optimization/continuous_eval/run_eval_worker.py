@@ -21,7 +21,6 @@ from typing import Any, Callable, Mapping, Optional, TypeVar, Union
 
 from absl import app
 from absl import flags
-from absl import logging
 import courier
 import gin
 import jax
@@ -207,20 +206,13 @@ def load_gin_and_run(
     config_file = os.path.join(train_log_dir, "config.gin")
 
     if not filesystem.exists(config_file):
-      logging.info("Found directory, but config file missing. Sleeping 10 sec.")
       time.sleep(10)
 
     gin.parse_config_file(config_file, skip_unknown=True)
 
-    logging.info("Gin bindings:")
     if FLAGS.gin_bindings:
       for g in FLAGS.gin_bindings:
-        logging.info(g)
       gin.parse_config(FLAGS.gin_bindings, skip_unknown=True)
-
-    logging.info("Parsed Gin bindings:")
-    for g in eval_cfg:
-      logging.info(g)
 
     gin.parse_config(eval_cfg, skip_unknown=True)
 
@@ -250,11 +242,9 @@ def connect_to_server_and_do_tasks(train_log_dir: str):
   server_name = distributed.uniquify_server_name(
       chief_name, os.path.join(train_log_dir, chief_name))
 
-  logging.info("Connecting to client  [[%s]]", server_name)
   client = courier.Client(str(server_name))
 
   while True:
-    logging.info("trying to get work")
     with profile.Profile("get_work"):
       task = client.get_work(FLAGS.task)
 
@@ -262,13 +252,10 @@ def connect_to_server_and_do_tasks(train_log_dir: str):
       with profile.Profile("task_sleep"):
         time.sleep(0.5)  # not too many workers, so this can be agressive.
         continue
-    logging.info("Got a task! %s", str(task))
 
     with profile.Profile("load_gin_and_run"):
       result = load_gin_and_run(train_log_dir, task, learned_optimizer=lopt)
-    logging.info("Finished the task with val %s", str(result))
     serialized = pickle.dumps(result)
-    logging.info(f"Uncompressed size: {len(serialized)}")  # pylint: disable=logging-fstring-interpolation
     with profile.Profile("finish_work"):
       client.finish_work(FLAGS.task, result)
 
