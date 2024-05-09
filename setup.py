@@ -50,7 +50,7 @@ setuptools.setup(
         'flax',
         'dm-haiku==0.0.5',
         'optax>=0.0.9',
-        'tensorflow>=2.7.0',
+        'tensorflow==2.8.4',
         'tensorflow-datasets>=4.4.0',
         'tensorflow-metadata==1.5.0',
         'tensorboard>=2.7.0',
