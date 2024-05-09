@@ -679,8 +679,9 @@ class HyperV2(lopt_base.LearnedOptimizer):
         lstm_hidden_state = jax.tree_util.tree_map(
             lambda x: jnp.tile(x, [n_states] + [1] * len(x.shape[1:])),
             theta["lstm_init_state"])
-        print(f"hidden_state:{lstm_hidden_state}, n_states:{n_states}, theta_initial: {theta}")
-        print(lstm_hidden_state[0].shape)
+        print(f"n_states:{n_states}")
+        print(lstm_hidden_state[0].shape, lstm_hidden_state[1].shape)
+        print(lstm_hidden_state)
 
         return State(
             params=params,
